@@ -1,0 +1,46 @@
+pipeline {
+  agent any
+
+  parameters {
+    string(name: 'NUM', defaultValue: '1', description: 'number of times to run')
+  }
+ environment {
+        COMMAND = 'ping -I'
+        COUNTS = '-c 2'
+  }
+  stages {
+    stage('Building the environment') {
+      steps {
+        sh """
+        cd /home/smb/KVM_Automation/
+        terraform apply --auto-approve
+        """  
+        echo "Running for: ${params.NUM} times"
+      }
+    }
+    stage('Check Connectivity to the DHCP Server') {
+      steps {
+        sh"""
+        ${COMMAND} 10.39.9.27 10.39.9.100 ${COUNTS}
+        ${COMMAND} 10.39.8.27 10.39.8.100 ${COUNTS}
+        ${COMMAND} 10.39.7.27 10.39.7.100 ${COUNTS}
+        ${COMMAND} 10.39.6.27 10.39.6.100 ${COUNTS}
+        """
+      }
+    }
+    stage('Run the DHCP Test'){
+        post {
+            success {
+              echo "The DHCP Test will run now for ${params.NUM} times"
+            }
+        }
+        steps{
+            sh """
+            exit
+            cd /home/smb/BashScripts/bin/
+            ./dhcp_test_loop.sh ${params.NUM}
+            """
+        }
+    }
+  }
+}
